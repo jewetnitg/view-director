@@ -1,3 +1,12 @@
+/**
+ * @todo document
+ * @param name
+ * @param list
+ * @param factory
+ * @param options
+ * @param existing
+ * @returns {factory} instance of the provided factory
+ */
 function ensure(name = "", list = {}, factory, options = {}, existing = {}) {
   if (typeof options === 'string') {
     if (existing[options]) {

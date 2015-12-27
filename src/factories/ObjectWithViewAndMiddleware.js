@@ -18,17 +18,6 @@ const ObjectWithViewAndMiddleware = ObjectWithView.extend({
     security: []
   },
 
-  initialize() {
-    _.bindAll(
-      this,
-      'render',
-      'sync',
-      'show',
-      'hide',
-      'remove'
-    );
-  },
-
   prototype: {
 
     /**

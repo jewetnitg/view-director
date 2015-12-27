@@ -104,18 +104,34 @@ const ViewDirector = FactoryFactory({
 
   prototype: {
 
+    /**
+     * @todo document
+     * @returns {Object<Object<Array<View>>>}
+     */
     get views() {
       return View.views;
     },
 
+    /**
+     * @todo document
+     * @returns {Object<Adapter>}
+     */
     get adapters() {
       return Adapter.adapters;
     },
 
+    /**
+     * @todo document
+     * @returns {Object<StaticView>}
+     */
     get staticViews() {
       return StaticView.staticViews;
     },
 
+    /**
+     * @todo document
+     * @returns {Object<Composition>}
+     */
     get compositions() {
       return Composition.compositions;
     },
@@ -140,17 +156,36 @@ const ViewDirector = FactoryFactory({
       return Adapter(options);
     },
 
+    /**
+     * @todo document
+     * @param options
+     * @returns {*}
+     * @constructor
+     */
     StaticView(options = {}) {
       _.defaults(options, this.options.config.staticViews);
       options.viewDirector = this;
       return this.staticViews[options.name] = StaticView(options);
     },
 
+    /**
+     * @todo document
+     * @param options
+     * @returns {*}
+     * @constructor
+     */
     Composition(options = {}) {
       options.viewDirector = this;
       return this.compositions[options.name || options.route] = Composition(options);
     },
 
+    /**
+     * @todo document
+     * @param composition
+     * @param params
+     * @param data
+     * @returns {Promise}
+     */
     setComposition(composition, params = {}, data = {}) {
       this.hide();
       this.state.composition = ensureComposition.call(this, composition);

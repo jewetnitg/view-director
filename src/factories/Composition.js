@@ -5,7 +5,6 @@ import StaticView from './StaticView';
 
 /**
  * @todo document
- * @todo see what methods have to be overridden
  * @class Composition
  */
 const Composition = ObjectWithViewAndMiddleware.extend({
@@ -35,6 +34,11 @@ const Composition = ObjectWithViewAndMiddleware.extend({
       ]);
     },
 
+    /**
+     * @todo document
+     * @param data
+     * @param replace
+     */
     sync(data, replace = false) {
       ObjectWithViewAndMiddleware.prototype.sync.call(this, data, replace);
       runStaticViews('sync', this.staticViews, [data, replace]);
@@ -72,6 +76,10 @@ function runStaticViews(type, staticViews = [], args = []) {
   });
 }
 
+/**
+ * @todo document
+ * @type {Object<Composition>}
+ */
 Composition.compositions = {};
 
 export default Composition;

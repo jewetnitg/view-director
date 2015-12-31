@@ -25,6 +25,12 @@ const ViewDirector = FactoryFactory({
 
   name: 'ViewDirector',
 
+  validate() {
+    if (ViewDirector.constructed) {
+      throw new Error(`Only one ViewDirector can be constructed.`);
+    }
+  },
+
   defaults: {
     holder: '.current-view',
     session: {},
@@ -32,6 +38,8 @@ const ViewDirector = FactoryFactory({
     libraries: {},
     config: {
       views: {},
+      compositions: {},
+      adapters: {},
       staticViews: {}
     }
   },
@@ -62,122 +70,12 @@ const ViewDirector = FactoryFactory({
   },
 
   initialize() {
-    if (this.options.config.views) {
-      Object.assign(View.defaults, this.options.config.views);
-    }
-
-    if (this.options.config.staticViews) {
-      Object.assign(StaticView.defaults, this.options.config.staticViews);
-    }
-
-    // set libraries on adapters so only one instance of the library is used
-    if (this.options.libraries.riot) {
-      riotAdapter.riot = this.options.libraries.riot;
-    }
-
-    if (this.options.libraries.react) {
-      reactAdapter.React = this.options.libraries.react;
-    }
-
-    if (this.options.libraries['react-dom']) {
-      reactAdapter.ReactDOM = this.options.libraries['react-dom'];
-    }
-
-    // @todo set defaults for Adapter and Composition
-
-    // construct provided adapters
-    constructType(this.Adapter.bind(this), {
-      react: reactAdapter,
-      riot: riotAdapter,
-      handlebars: handlebarsAdapter
-    });
-    constructType(this.Adapter.bind(this), this.options.adapters);
-
-    _.each(this.options.views, (viewOptions, name) => {
-      viewOptions.name = viewOptions.name || name;
-      View.register(viewOptions);
-    });
-
-    constructType(this.StaticView.bind(this), this.options.staticViews);
-    constructType(this.Composition.bind(this), this.options.compositions);
+    setDefaults(this);
+    constructEntities(this);
+    ViewDirector.constructed = true;
   },
 
   prototype: {
-
-    /**
-     * @todo document
-     * @returns {Object<Object<Array<View>>>}
-     */
-    get views() {
-      return View.views;
-    },
-
-    /**
-     * @todo document
-     * @returns {Object<Adapter>}
-     */
-    get adapters() {
-      return Adapter.adapters;
-    },
-
-    /**
-     * @todo document
-     * @returns {Object<StaticView>}
-     */
-    get staticViews() {
-      return StaticView.staticViews;
-    },
-
-    /**
-     * @todo document
-     * @returns {Object<Composition>}
-     */
-    get compositions() {
-      return Composition.compositions;
-    },
-
-    /**
-     * @todo document
-     * @param options
-     * @returns {*}
-     * @constructor
-     */
-    View(options = {}) {
-      _.defaults(options, this.options.config.views);
-      return this.views[options.name] = View(options);
-    },
-
-    /**
-     * @todo document
-     * @param options
-     * @constructor
-     */
-    Adapter(options = {}) {
-      return Adapter(options);
-    },
-
-    /**
-     * @todo document
-     * @param options
-     * @returns {*}
-     * @constructor
-     */
-    StaticView(options = {}) {
-      _.defaults(options, this.options.config.staticViews);
-      options.viewDirector = this;
-      return this.staticViews[options.name] = StaticView(options);
-    },
-
-    /**
-     * @todo document
-     * @param options
-     * @returns {*}
-     * @constructor
-     */
-    Composition(options = {}) {
-      options.viewDirector = this;
-      return this.compositions[options.name || options.route] = Composition(options);
-    },
 
     /**
      * @todo document
@@ -188,11 +86,9 @@ const ViewDirector = FactoryFactory({
      */
     setComposition(composition, params = {}, data = {}) {
       this.hide();
-      this.state.composition = ensureComposition.call(this, composition);
-      return this.state.composition.render(params, data)
-        .then(() => {
-          this.show();
-        })
+      this.state.composition = Composition.ensure(composition);
+
+      return this.state.composition.render(params, data);
     },
 
     /**
@@ -220,36 +116,7 @@ const ViewDirector = FactoryFactory({
     sync(data = {}) {
       if (this.state.composition) {
         this.state.composition.sync(data);
-      } else {
-        return Promise.reject(`Can't sync, no current composition`);
       }
-    },
-
-    /**
-     * @todo document
-     */
-    ensureAdapter(adapter) {
-      return ensure('Adapter', this.options.adapters, this.Adapter.bind(this), adapter, this.adapters);
-    },
-
-    /**
-     * @todo document
-     */
-    ensureView(view) {
-      return ensure('View', this.options.views, this.View.bind(this), view, View.views);
-    },
-
-    /**
-     * @todo document
-     */
-    ensureStaticView(staticViewName) {
-      return ensure(
-        'StaticView',
-        this.options.staticViews,
-        this.StaticView.bind(this),
-        staticViewName,
-        this.staticViews
-      );
     },
 
     /**
@@ -279,32 +146,55 @@ const ViewDirector = FactoryFactory({
 
 });
 
+ViewDirector.constructed = false;
+
+function setDefaults(viewDirector) {
+  // set defaults on factories, so instances get these defaults
+  Object.assign(View.defaults, viewDirector.options.config.views);
+  Object.assign(StaticView.defaults, viewDirector.options.config.staticViews);
+  Object.assign(Adapter.defaults, viewDirector.options.config.adapters);
+  Object.assign(Composition.defaults, viewDirector.options.config.compositions);
+
+  StaticView.defaults.viewDirector = viewDirector;
+  Composition.defaults.viewDirector = viewDirector;
+
+  // set libraries on adapters so only one instance of the library is used
+  if (viewDirector.options.libraries.riot) {
+    riotAdapter.riot = viewDirector.options.libraries.riot;
+  }
+
+  if (viewDirector.options.libraries.react) {
+    reactAdapter.React = viewDirector.options.libraries.react;
+  }
+
+  if (viewDirector.options.libraries['react-dom']) {
+    reactAdapter.ReactDOM = viewDirector.options.libraries['react-dom'];
+  }
+}
+
+function constructEntities(viewDirector) {
+  // construct provided adapters
+  constructType(Adapter, {
+    react: reactAdapter,
+    riot: riotAdapter,
+    handlebars: handlebarsAdapter
+  });
+  constructType(Adapter, viewDirector.options.adapters);
+
+  _.each(viewDirector.options.views, (viewOptions, name) => {
+    viewOptions.name = viewOptions.name || name;
+    View.register(viewOptions);
+  });
+
+  constructType(StaticView, viewDirector.options.staticViews);
+  constructType(Composition, viewDirector.options.compositions);
+}
+
 function constructType(factory, hashmap, identifier = "name") {
   _.each(hashmap, (options = {}, identity) => {
     options[identifier] = options[identifier] || identity;
     factory(options);
   });
-}
-
-function ensureComposition(composition) {
-  if (typeof composition === 'string') {
-    const _composition = _.get(this.compositions, composition);
-
-    if (!_composition) {
-      throw new ReferenceError(`Couldn't not ensure composition '${composition}', composition not defined.`);
-    }
-
-    return _composition;
-  } else if (composition instanceof Composition) {
-    return composition;
-  } else if (typeof composition === 'object') {
-    return _.find(this.compositions, _composition => {
-        return _.eq(_composition.options, composition);
-      }) || this.Composition(composition);
-  } else {
-    console.error('ensureComposition arguments', arguments);
-    throw new TypeError(`Could not ensure composition, invalid composition provided.`);
-  }
 }
 
 export default ViewDirector;

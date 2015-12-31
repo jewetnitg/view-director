@@ -20,7 +20,7 @@ function ensure(name = "", list = {}, factory, options = {}, existing = {}) {
     }
 
     return factory(opts);
-  } else if (options instanceof View) {
+  } else if (options instanceof factory) {
     return options;
   } else if (!Array.isArray(options) && typeof options === 'object') {
     return factory(options);

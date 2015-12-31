@@ -11,10 +11,13 @@ const Composition = ObjectWithViewAndMiddleware.extend({
 
   name: 'Composition',
 
-  defaults(options = {}) {
-    return {
-      name: options.route
-    };
+  defaults: {},
+
+  validate: ['route'],
+
+  initialize() {
+    this.options.name = this.options.name || this.options.route;
+    Composition.compositions[this.options.name] = this;
   },
 
   prototype: {
@@ -37,11 +40,10 @@ const Composition = ObjectWithViewAndMiddleware.extend({
     /**
      * @todo document
      * @param data
-     * @param replace
      */
-    sync(data, replace = false) {
-      ObjectWithViewAndMiddleware.prototype.sync.call(this, data, replace);
-      runStaticViews('sync', this.staticViews, [data, replace]);
+    sync(data) {
+      ObjectWithViewAndMiddleware.prototype.sync.call(this, data);
+      runStaticViews('sync', this.staticViews, [data]);
     },
 
     /**
@@ -64,6 +66,39 @@ const Composition = ObjectWithViewAndMiddleware.extend({
 
 });
 
+/**
+ * @todo document
+ * @type {Object<Composition>}
+ */
+Composition.compositions = {};
+
+/**
+ * @todo document
+ * @param composition
+ * @returns {*}
+ */
+Composition.ensure = function (composition) {
+  if (typeof composition === 'string') {
+    const _composition = _.get(Composition.compositions, composition);
+
+    if (!_composition) {
+      throw new ReferenceError(`Couldn't not ensure composition '${composition}', composition not defined.`);
+    }
+
+    return _composition;
+  } else if (composition instanceof Composition) {
+    return composition;
+  } else if (typeof composition === 'object') {
+    return _.find(Composition.compositions, _composition => {
+        return _.eq(_composition.options, composition);
+      }) || Composition(composition);
+  } else {
+    console.error('Composition.ensure argument', composition);
+    throw new TypeError(`Could not ensure composition, invalid composition provided.`);
+  }
+};
+
+// @todo refactor to StaticView ?
 function runStaticViews(type, staticViews = [], args = []) {
   return _.map(staticViews, (name) => {
     const staticView = StaticView.staticViews[name];
@@ -76,10 +111,5 @@ function runStaticViews(type, staticViews = [], args = []) {
   });
 }
 
-/**
- * @todo document
- * @type {Object<Composition>}
- */
-Composition.compositions = {};
 
 export default Composition;

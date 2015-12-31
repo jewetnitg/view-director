@@ -57,16 +57,8 @@ const ObjectWithViewAndMiddleware = ObjectWithView.extend({
       return this.middleware(params, data, this.sync.bind(this))
         .then(data => {
           ObjectWithView.prototype.render.call(this, data, force);
-          this.trigger('render', data);
         }, (err) => {
-          if (err.code === 403) {
-            this.trigger('securityError', err);
-          } else {
-            this.trigger('unexpectedError', err);
-          }
-
           this.hide();
-
           return Promise.reject(err);
         });
     }

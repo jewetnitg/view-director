@@ -86,9 +86,15 @@ const ViewDirector = FactoryFactory({
      */
     setComposition(composition, params = {}, data = {}) {
       this.hide();
+
+      if (this.state.composition && this.state.composition.executionContext) {
+        this.state.composition.executionContext.destroy();
+      }
+
       this.state.composition = Composition.ensure(composition);
 
       return this.state.composition.render(params, data);
+      return this.state.composition.executionContext(params, data);
     },
 
     /**

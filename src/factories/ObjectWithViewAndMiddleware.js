@@ -28,8 +28,9 @@ const ObjectWithViewAndMiddleware = ObjectWithView.extend({
     middleware(params = {}, data = {}) {
       return this.options.viewDirector.security(this.options.security, params)
         .then(() => {
-          return this.options.viewDirector.data(this.options.data, params, data, this.sync.bind(this))
-            .then(data => {
+          this.executionContext = this.options.viewDirector.data(this.options.data, params, data, this.sync.bind(this));
+
+          return this.executionContext.then(data => {
               return data;
             }, error => {
               // 'internal' error, data middleware failed, 'this shouldn't happen' were his famous last words
